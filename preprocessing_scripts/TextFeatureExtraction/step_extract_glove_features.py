@@ -11,7 +11,7 @@ class ExtractGloveFeature:
         self.DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
                                      'Data')
         self.DEST_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
-                                     'Data', 'glove_features')
+                                     'Data', 'text_features')
 
         self.train_df = pd.read_csv(os.path.join(self.DATA_DIR, 'train_dataset.csv'))
         self.test_df = pd.read_csv(os.path.join(self.DATA_DIR, 'test_dataset.csv'))
@@ -26,21 +26,19 @@ class ExtractGloveFeature:
     def create_representation(self):
         for grp, data in self.test_df.groupby(['youtubeId']):
             datum = data.iloc[0]
-            dest_file_name = '{}.p'.format(datum['youtubeId'])
+            dest_file_name = '{}.npy'.format(datum['youtubeId'])
             keyword = datum['keyword']
             vector_representation = self.get_glove_vector(keyword)
 
-            with open(os.path.join(self.DEST_DIR, dest_file_name), 'wb') as f:
-                pickle.dump(vector_representation, f)
+            np.savetxt(os.path.join(self.DEST_DIR, dest_file_name),vector_representation)
 
         for grp, data in self.train_df.groupby(['youtubeId']):
             datum = data.iloc[0]
-            dest_file_name = '{}.p'.format(datum['youtubeId'])
+            dest_file_name = '{}.npy'.format(datum['youtubeId'])
             keyword = datum['keyword']
             vector_representation = self.get_glove_vector(keyword)
 
-            with open(os.path.join(self.DEST_DIR, dest_file_name), 'wb') as f:
-                pickle.dump(vector_representation, f)
+            np.savetxt(os.path.join(self.DEST_DIR, dest_file_name), vector_representation)
 
     def get_glove_vector(self, inp):
         result = np.zeros((100,))

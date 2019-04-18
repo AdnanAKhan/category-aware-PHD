@@ -8,7 +8,7 @@ import numpy as np
 import torch
 from torch.autograd import Variable
 from utils import utils as utils
-from model.net import Net, loss_fn, metrics, accuracy
+from model.net import PhdGifNet, loss_fn, metrics, accuracy
 import model.data_loader as data_loader
 
 parser = argparse.ArgumentParser()
@@ -49,11 +49,10 @@ def evaluate(model,
     for i, (highlight_batch, non_highlight_batch, text_feature_batch, user_history_batch) in enumerate(dataloader):
         highlight_batch = highlight_batch.reshape(highlight_batch.shape[0], -1).float()
         non_highlight_batch = non_highlight_batch.reshape(non_highlight_batch.shape[0], -1).float()
-        text_feature_batch = text_feature_batch.reshape(text_feature_batch.shape[0], -1).float()
         user_history_batch = user_history_batch.reshape(user_history_batch.shape[0], -1).float()
 
-        positive_batch = torch.cat((highlight_batch, user_history_batch, text_feature_batch), dim=1)
-        negative_batch = torch.cat((non_highlight_batch, user_history_batch, text_feature_batch), dim=1)
+        positive_batch = torch.cat((highlight_batch, user_history_batch), dim=1)
+        negative_batch = torch.cat((non_highlight_batch, user_history_batch), dim=1)
         # move to GPU if available
         if params.cuda:
             positive_batch, negative_batch = positive_batch.cuda(async=True), negative_batch.cuda(async=True)
@@ -118,7 +117,7 @@ if __name__ == '__main__':
     logging.info("getting the test dataloader - done.")
 
     # Define the model
-    model = Net().cuda() if params.cuda else Net()
+    model = PhdGifNet().cuda() if params.cuda else PhdGifNet()
 
     loss_fn = loss_fn
     metrics = metrics

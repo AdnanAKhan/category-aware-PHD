@@ -10,9 +10,9 @@ import torch.optim as optim
 from torch.autograd import Variable
 
 import model.data_loader as data_loader
-from model.net import Net, accuracy, loss_fn, metrics
+from model.net import PhdGifNet, accuracy, loss_fn, metrics
 from utils import utils as utils
-from evaluate import evaluate
+from evaluate_phd_gif import evaluate
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--base_dir', default='/home/adnankhan/PycharmProjects/HighlightDetection/',
@@ -20,7 +20,7 @@ parser.add_argument('--base_dir', default='/home/adnankhan/PycharmProjects/Highl
 parser.add_argument('--data_dir', default='/home/adnankhan/PycharmProjects/HighlightDetection/Data/',
                     help="Directory containing the dataset")
 parser.add_argument('--model_dir',
-                    default='/home/adnankhan/PycharmProjects/HighlightDetection/pytorch_implementation/experiments/test_model',
+                    default='/home/adnankhan/PycharmProjects/HighlightDetection/pytorch_implementation/experiments/phd_gif_model',
                     help="Directory containing params.json")
 parser.add_argument('--restore_file', default=None,
                     help="Optional, name of the file in --model_dir containing weights to reload before \
@@ -45,16 +45,16 @@ def train(model, optimizer, loss_fn, dataloader, metrics, params):
 
     # summary for current training loop and a running average object for loss
     summary = []
+    loss_over_batch = []
     loss_avg = utils.RunningAverage()
 
     for i, (highlight_batch, non_highlight_batch, text_feature_batch, user_history_batch) in enumerate(dataloader):
         highlight_batch = highlight_batch.reshape(highlight_batch.shape[0], -1).float()
         non_highlight_batch = non_highlight_batch.reshape(non_highlight_batch.shape[0], -1).float()
-        text_feature_batch = text_feature_batch.reshape(text_feature_batch.shape[0], -1).float()
         user_history_batch = user_history_batch.reshape(user_history_batch.shape[0], -1).float()
 
-        positive_batch = torch.cat((highlight_batch, user_history_batch, text_feature_batch), dim=1)
-        negative_batch = torch.cat((non_highlight_batch, user_history_batch, text_feature_batch), dim=1)
+        positive_batch = torch.cat((highlight_batch, user_history_batch), dim=1)
+        negative_batch = torch.cat((non_highlight_batch, user_history_batch), dim=1)
 
         # move to GPU if available
         if params.cuda:
@@ -89,12 +89,15 @@ def train(model, optimizer, loss_fn, dataloader, metrics, params):
             # logging.info("- Batch loss: {}".format(summary_batch['loss']))
             summary.append(summary_batch)
 
+        loss_over_batch.append(loss.item())
         # update the average loss
         loss_avg.update(loss.item())
 
     metrics_mean = {metric: np.mean([x[metric] for x in summary]) for metric in summary[0]}
     metrics_string = " ; ".join("{}: {:05.3f}".format(k, v) for k, v in metrics_mean.items())
     logging.info("- Train metrics: " + metrics_string)
+
+    return np.array(loss_over_batch)
 
 
 def train_and_evaluate(model,
@@ -127,12 +130,15 @@ def train_and_evaluate(model,
 
     best_val_acc = 0.0
 
+    loss_over_epoch=[]
+
     for epoch in range(params.num_epochs):
         # Run one epoch
         logging.info("Epoch {}/{}".format(epoch + 1, params.num_epochs))
 
         # compute number of batches in one epoch (one full pass over the training set)
-        train(model, optimizer, loss_fn, train_dataloader, metrics, params)
+        loss_over_batch = train(model, optimizer, loss_fn, train_dataloader, metrics, params)
+        loss_over_epoch.append(loss_over_batch)
 
         # Evaluate for one epoch on validation set
         val_metrics = evaluate(model, loss_fn, val_dataloader, metrics, params)
@@ -159,6 +165,8 @@ def train_and_evaluate(model,
         # Save latest val metrics in a json file in the model directory
         last_json_path = os.path.join(model_dir, "metrics_val_last_weights.json")
         utils.save_dict_to_json(val_metrics, last_json_path)
+
+    return loss_over_epoch
 
 
 if __name__ == '__main__':
@@ -192,7 +200,7 @@ if __name__ == '__main__':
     logging.info("dataset loading - done.")
 
     # Define the model and optimizer
-    model = Net().cuda() if params.cuda else Net()
+    model = PhdGifNet().cuda() if params.cuda else PhdGifNet()
     optimizer = optim.Adam(model.parameters(), lr=params.learning_rate)
 
     # fetch loss function and metrics
@@ -201,4 +209,7 @@ if __name__ == '__main__':
 
     # Train the model
     logging.info("Starting training for {} epoch(s)".format(params.num_epochs))
-    train_and_evaluate(model, train_dl, val_dl, optimizer, loss_fn, metrics, params, args.model_dir, args.restore_file)
+    loss_over_epoch = train_and_evaluate(model, train_dl, val_dl, optimizer, loss_fn, metrics, params, args.model_dir, args.restore_file)
+
+    logging.info("saving the loss in {}".format(args.model_dir))
+    np.savetxt(os.path.join(args.model_dir, 'train_loss.npy'), np.array(loss_over_epoch))

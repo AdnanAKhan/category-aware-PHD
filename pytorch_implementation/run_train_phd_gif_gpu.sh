@@ -1,0 +1,2 @@
+#!/usr/bin/env bash
+/usr/local/anaconda3/bin/python train.py --base_dir /home/cs/grad/akhan/pytorch_code --data_dir /import/helium-share/csgrad/akhan --model_dir /home/cs/grad/akhan/pytorch_code/experiments/phd_gif_model

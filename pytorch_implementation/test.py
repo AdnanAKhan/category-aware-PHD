@@ -3,7 +3,6 @@
 import argparse
 import logging
 import os
-
 import numpy as np
 import torch
 from torch.autograd import Variable
@@ -59,13 +58,19 @@ def test(model,
         # move to GPU if available
         if params.cuda:
             positive_batch, negative_batch = positive_batch.cuda(async=True), negative_batch.cuda(async=True)
+            device = torch.device("cuda")
 
         positive_batch, negative_batch = Variable(positive_batch), Variable(negative_batch)
 
         positive_batch_output = model(positive_batch)
         negative_batch_output = model(negative_batch)
 
-        loss = loss_fn(positive_batch_output, negative_batch_output, torch.ones(positive_batch.shape[0], 1))
+        if params.cuda:
+            loss = loss_fn(positive_batch_output, negative_batch_output,
+                           torch.ones(positive_batch.shape[0], 1, device=device))
+        else:
+            loss = loss_fn(positive_batch_output, negative_batch_output,
+                           torch.ones(positive_batch.shape[0], 1))
 
         # compute all metrics on this batch
         summary_batch = {metric: metrics[metric](positive_batch_output, negative_batch_output) for metric in metrics}

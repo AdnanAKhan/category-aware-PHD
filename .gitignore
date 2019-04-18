@@ -14,7 +14,9 @@ metrics_val_*
 __pycache__/
 *.py[cod]
 *$py.class
-
+*.pth.tar
+*.log
+*_val_last_weights.json
 # C extensions
 *.so
 

@@ -12,8 +12,7 @@ class CreateTrainingDatasetFile:
         self.base_data_dir = '/home/adnankhan/PycharmProjects/HighlightDetection/Data/'
         self.user_history_feature_dir = os.path.join(self.base_data_dir, 'user_history')
         self.video_feature_dir = os.path.join(self.base_data_dir, 'video_features')
-        # self.glove_feature_dir = os.path.join(self.base_data_dir, 'glove_features')
-        self.glove_feature_dir = os.path.join('glove_features')
+        self.text_feature_dir = os.path.join('text_features')
         self.src_train_file_path = os.path.join(self.base_data_dir, 'train_dataset.csv')
         self.dest_train_file_path = os.path.join(self.base_data_dir, 'train_dataset_pytorch.csv')
 
@@ -52,8 +51,8 @@ class CreateTrainingDatasetFile:
                             '{}/{}_{}/non_highlight/*/*.npy'.format(self.video_feature_dir, v_id, user_id))
 
                     user_history_feature_path = os.path.join(self.user_history_feature_dir, '{}.npy'.format(user_id))
-                    word_feature_representation_path = os.path.join(self.glove_feature_dir,
-                                                                    '{}.p'.format(train_data_video_id[0]))
+                    word_feature_representation_path = os.path.join(self.text_feature_dir,
+                                                                    '{}.npy'.format(train_data_video_id[0]))
 
                     for positive in train_highlight_features_paths:
                         for negative in train_non_highlight_features_paths:
@@ -96,8 +95,8 @@ class CreateTrainingDatasetFile:
                             '{}/{}_{}/non_highlight/*/*.npy'.format(self.video_feature_dir, v_id, user_id))
 
                     user_history_feature_path = os.path.join(self.user_history_feature_dir, '{}.npy'.format(user_id))
-                    word_feature_representation_path = os.path.join(self.glove_feature_dir,
-                                                                    '{}.p'.format(test_data_video_id[0]))
+                    word_feature_representation_path = os.path.join(self.text_feature_dir,
+                                                                    '{}.npy'.format(test_data_video_id[0]))
 
                     for positive in test_highlight_features_paths:
                         for negative in test_non_highlight_features_paths:
@@ -111,5 +110,5 @@ class CreateTrainingDatasetFile:
 
 if __name__ == '__main__':
     obj = CreateTrainingDatasetFile()
-    # obj.execute_train()
+    obj.execute_train()
     obj.execute_test()

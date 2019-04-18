@@ -92,17 +92,17 @@ class ExtractC3D:
     """
 
     def __init__(self):
-        self.DATA_DIR = '/home/adnankhan/dataset/'
-        self.SEGMENT_DIR = os.path.join(self.DATA_DIR, 'video_segments')
-        self.FEATURE_DIR = os.path.join(self.DATA_DIR, 'feature_c3d', 'video_features')
+        self.DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+                                     'Data')
+        self.SEGMENT_DIR = os.path.join(self.DATA_DIR, 'Test', 'test_videos')
+        self.FEATURE_DIR = os.path.join(self.DATA_DIR, 'Test', 'test_video_features')
+        self.pretrained_c3d_path = os.path.join(self.DATA_DIR, 'c3d.pickle')
+
         if not os.path.exists(self.FEATURE_DIR):
             os.makedirs(self.FEATURE_DIR)
+
         self.SEQUENCE_LENGTH = 16
-        self.NUMBER_OF_SAMPLES = 10
-        random.seed(2424)
-
         self.params = {}
-
         # use GPU if available
         self.params['cuda'] = torch.cuda.is_available()  # use GPU is available
 
@@ -113,7 +113,7 @@ class ExtractC3D:
 
         # get network pre-trained model
         self.net = C3D()
-        self.net.load_state_dict(torch.load('c3d.pickle'))
+        self.net.load_state_dict(torch.load(self.pretrained_c3d_path))
         if self.params['cuda']:
             self.net.cuda()
 
@@ -124,41 +124,25 @@ class ExtractC3D:
 
         for folder in base_folders:
             # segment folders
-            if os.path.exists(os.path.join(self.SEGMENT_DIR, folder, 'highlight')):
-                for segment_folder in os.listdir(os.path.join(self.SEGMENT_DIR, folder, 'highlight')):
-                    segment_path = os.path.join(self.SEGMENT_DIR, folder, 'highlight', segment_folder)
-                    dest_path = os.path.join(self.FEATURE_DIR, folder, 'highlight', segment_folder)
-                    if not os.path.exists(dest_path):
-                        os.makedirs(dest_path)
-                        self.extract_feature_from_video(segment_path, dest_path)
+            if os.path.exists(os.path.join(self.SEGMENT_DIR, folder)):
+                segment_path = os.path.join(self.SEGMENT_DIR, folder)
+                dest_path = os.path.join(self.FEATURE_DIR, folder)
+                if not os.path.exists(dest_path):
+                    os.makedirs(dest_path)
+                    for segment_folder in os.listdir(segment_path):
+                        src_segment_path = os.path.join(segment_path, segment_folder)
+                        dest_segment_path = os.path.join(dest_path, segment_folder)
+                        if not os.path.exists(dest_segment_path):
+                            os.makedirs(dest_segment_path)
 
-            # Non segment folders
-            if os.path.exists(os.path.join(self.SEGMENT_DIR, folder, 'non_highlight')):
-                for segment_folder in os.listdir(os.path.join(self.SEGMENT_DIR, folder, 'non_highlight')):
-                    segment_path = os.path.join(self.SEGMENT_DIR, folder, 'non_highlight', segment_folder)
-                    dest_path = os.path.join(self.FEATURE_DIR, folder, 'non_highlight', segment_folder)
-                    if not os.path.exists(dest_path):
-                        os.makedirs(dest_path)
-                        self.extract_feature_from_video(segment_path, dest_path)
+                        self.extract_feature_from_video(src_segment_path, dest_segment_path)
 
     def extract_feature_from_video(self, src_path, dest_path):
         clip = sorted(glob(join(src_path, '*.jpg')))
         if len(clip) > 0:
-            clip_segments = []
-            number_of_frames = len(clip)
-
-            for i in range(0, number_of_frames, self.SEQUENCE_LENGTH):
-                if i + self.SEQUENCE_LENGTH > number_of_frames:
-                    clip_segments.append(clip[number_of_frames - self.SEQUENCE_LENGTH: number_of_frames])
-                else:
-                    clip_segments.append(clip[i:i + self.SEQUENCE_LENGTH])
-
-            random.shuffle(clip_segments)
-
-            for ind, segment in enumerate(clip_segments[0:self.NUMBER_OF_SAMPLES]):
-                numpy_data = ExtractC3D.get_segment_numpy_array(segment)
-                features = self.extract(numpy_data)
-                np.savetxt(os.path.join(dest_path, '{}.npy'.format(ind)), features)
+            numpy_data = ExtractC3D.get_segment_numpy_array(clip)
+            features = self.extract(numpy_data)
+            np.savetxt(os.path.join(dest_path, '{}.npy'.format('feature')), features)
 
     @staticmethod
     def get_segment_numpy_array(segment, verbose=False):
@@ -208,7 +192,7 @@ class ExtractC3D:
         return feature_fc7.data.cpu().numpy()
 
     def test(self):
-        path = os.path.join(self.FEATURE_DIR, 'kDqG9h-C6p0_13584', 'highlight', '0')
+        path = os.path.join(self.SEGMENT_DIR, '7di0msUwkLM_13180', 'segment_1_0')
         folders = os.listdir(path)
         npy_array = np.loadtxt(os.path.join(path, folders[0]))
         print(npy_array.shape)
@@ -219,5 +203,4 @@ class ExtractC3D:
 
 if __name__ == '__main__':
     obj = ExtractC3D()
-    # obj.run()
-    obj.test()
+    obj.run()
